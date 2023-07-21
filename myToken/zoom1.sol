@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-pragma solidity = 0.8.16;
+pragma solidity >=0.8.0 <0.9.0;
+pragma experimental ABIEncoderV2;
 
 abstract contract Context {
     function _msgSender() internal view virtual returns (address) {
@@ -528,7 +529,7 @@ interface IUniswapV2Router02 {
     ) external;
 }
 
-contract JOOK is ERC20, Ownable {
+contract DAGMI is ERC20, Ownable {
     using SafeMath for uint256;
 
     IUniswapV2Router02 public immutable uniswapV2Router;
@@ -538,10 +539,10 @@ contract JOOK is ERC20, Ownable {
 
     bool private swapping;
 
-    address public taxWallet;
+    address public papaWallet;
     address public developmentWallet;
     address public liquidityWallet;
-    address public marketingWallet;
+    address public operationsWallet;
 
     uint256 public maxTransaction;
     uint256 public swapTokensAtAmount;
@@ -558,21 +559,21 @@ contract JOOK is ERC20, Ownable {
     mapping(address => bool) public blocked;
 
     uint256 public buyTotalFees;
-    uint256 public buyTax;
+    uint256 public buyPapaFee;
     uint256 public buyLiquidityFee;
     uint256 public buyDevelopmentFee;
-    uint256 public buyMarketingFee;
+    uint256 public buyOperationsFee;
 
     uint256 public sellTotalFees;
-    uint256 public sellTax;
+    uint256 public sellPapaFee;
     uint256 public sellLiquidityFee;
     uint256 public sellDevelopmentFee;
-    uint256 public sellMarketingFee;
+    uint256 public sellOperationsFee;
 
-    uint256 public tokensForTax;
+    uint256 public tokensForPapa;
     uint256 public tokensForLiquidity;
     uint256 public tokensForDevelopment;
-    uint256 public tokensForMarketing;
+    uint256 public tokensForOperations;
 
     mapping(address => bool) private _isExcludedFromFees;
     mapping(address => bool) public _isExcludedmaxTransaction;
@@ -588,7 +589,7 @@ contract JOOK is ERC20, Ownable {
 
     event SetAutomatedMarketMakerPair(address indexed pair, bool indexed value);
 
-    event taxWalletUpdated(
+    event papaWalletUpdated(
         address indexed newWallet,
         address indexed oldWallet
     );
@@ -603,7 +604,7 @@ contract JOOK is ERC20, Ownable {
         address indexed oldWallet
     );
 
-    event marketingWalletUpdated(
+    event operationsWalletUpdated(
         address indexed newWallet,
         address indexed oldWallet
     );
@@ -614,7 +615,7 @@ contract JOOK is ERC20, Ownable {
         uint256 tokensIntoLiquidity
     );
 
-    constructor() ERC20("JOOK PROTOCOL", "JOOK") {
+    constructor() ERC20("DOGS ARE GONNA MAKE IT", "DAGMI") {
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(uniV2router); 
 
         excludeFromMaxTransaction(address(_uniswapV2Router), true);
@@ -625,39 +626,39 @@ contract JOOK is ERC20, Ownable {
         _setAutomatedMarketMakerPair(address(uniswapV2Pair), true);
 
         // launch buy fees
-        uint256 _buyTax = 4;
-        uint256 _buyLiquidityFee = 1;
-        uint256 _buyDevelopmentFee = 1;
-        uint256 _buyMarketingFee = 2;
+        uint256 _buyPapaFee = 2;
+        uint256 _buyLiquidityFee = 0;
+        uint256 _buyDevelopmentFee = 0;
+        uint256 _buyOperationsFee = 18;
         
         // launch sell fees
-        uint256 _sellTax = 4;
-        uint256 _sellLiquidityFee = 1;
-        uint256 _sellDevelopmentFee = 1;
-        uint256 _sellMarketingFee = 2;
+        uint256 _sellPapaFee = 2;
+        uint256 _sellLiquidityFee = 0;
+        uint256 _sellDevelopmentFee = 0;
+        uint256 _sellOperationsFee = 38;
 
-        uint256 totalSupply = 10_000_000 * 1e18;
+        uint256 totalSupply = 1_000_000 * 1e18;
 
-        maxTransaction = 100_000 * 1e18; // 1% max transaction at launch
-        maxWallet = 100_000 * 1e18; // 1% max wallet at launch
+        maxTransaction = 10_000 * 1e18; // 1% max transaction at launch
+        maxWallet = 10_000 * 1e18; // 1% max wallet at launch
         swapTokensAtAmount = (totalSupply * 5) / 10000; // 0.05% swap wallet
 
-        buyTax = _buyTax;
+        buyPapaFee = _buyPapaFee;
         buyLiquidityFee = _buyLiquidityFee;
         buyDevelopmentFee = _buyDevelopmentFee;
-        buyMarketingFee = _buyMarketingFee;
-        buyTotalFees = buyTax + buyLiquidityFee + buyDevelopmentFee + buyMarketingFee;
+        buyOperationsFee = _buyOperationsFee;
+        buyTotalFees = buyPapaFee + buyLiquidityFee + buyDevelopmentFee + buyOperationsFee;
 
-        sellTax = _sellTax;
+        sellPapaFee = _sellPapaFee;
         sellLiquidityFee = _sellLiquidityFee;
         sellDevelopmentFee = _sellDevelopmentFee;
-        sellMarketingFee = _sellMarketingFee;
-        sellTotalFees = sellTax + sellLiquidityFee + sellDevelopmentFee + sellMarketingFee;
+        sellOperationsFee = _sellOperationsFee;
+        sellTotalFees = sellPapaFee + sellLiquidityFee + sellDevelopmentFee + sellOperationsFee;
 
-        taxWallet = address(0xf64220FDE24D5AD4B7e669D3c1cc79B60124316E);
-        developmentWallet = address(0xf64220FDE24D5AD4B7e669D3c1cc79B60124316E); 
-        liquidityWallet = address(0xf64220FDE24D5AD4B7e669D3c1cc79B60124316E); 
-       marketingWallet = address(0xf64220FDE24D5AD4B7e669D3c1cc79B60124316E);
+        papaWallet = address(0xAbB28CdF443d68187f6a092292c7A11F03931B21); 
+        developmentWallet = address(0xAbB28CdF443d68187f6a092292c7A11F03931B21); 
+        liquidityWallet = address(0xAbB28CdF443d68187f6a092292c7A11F03931B21); 
+        operationsWallet = address(0x3CfAab04C55063875625AFA4ca18012749db3F08);
 
         // exclude from paying fees or having max transaction amount
         excludeFromFees(owner(), true);
@@ -739,30 +740,30 @@ contract JOOK is ERC20, Ownable {
     }
 
     function updateBuyFees(
-        uint256 _taxFee,
+        uint256 _papaFee,
         uint256 _liquidityFee,
         uint256 _developmentFee,
-        uint256  _marketingFee
+        uint256 _operationsFee
     ) external onlyOwner {
-        buyTax = _taxFee;
+        buyPapaFee = _papaFee;
         buyLiquidityFee = _liquidityFee;
         buyDevelopmentFee = _developmentFee;
-        buyMarketingFee =  _marketingFee;
-        buyTotalFees = buyTax + buyLiquidityFee + buyDevelopmentFee + buyMarketingFee;
+        buyOperationsFee = _operationsFee;
+        buyTotalFees = buyPapaFee + buyLiquidityFee + buyDevelopmentFee + buyOperationsFee;
         require(buyTotalFees <= 99);
     }
 
     function updateSellFees(
-        uint256 _taxFee,
+        uint256 _papaFee,
         uint256 _liquidityFee,
         uint256 _developmentFee,
-        uint256  _marketingFee
+        uint256 _operationsFee
     ) external onlyOwner {
-        sellTax = _taxFee;
+        sellPapaFee = _papaFee;
         sellLiquidityFee = _liquidityFee;
         sellDevelopmentFee = _developmentFee;
-        sellMarketingFee =  _marketingFee;
-        sellTotalFees = sellTax + sellLiquidityFee + sellDevelopmentFee + sellMarketingFee;
+        sellOperationsFee = _operationsFee;
+        sellTotalFees = sellPapaFee + sellLiquidityFee + sellDevelopmentFee + sellOperationsFee;
         require(sellTotalFees <= 99); 
     }
 
@@ -789,9 +790,9 @@ contract JOOK is ERC20, Ownable {
         emit SetAutomatedMarketMakerPair(pair, value);
     }
 
-    function updatetaxWallet(address newtaxWallet) external onlyOwner {
-        emit taxWalletUpdated(newtaxWallet, taxWallet);
-        taxWallet = newtaxWallet;
+    function updatepapaWallet(address newpapaWallet) external onlyOwner {
+        emit papaWalletUpdated(newpapaWallet, papaWallet);
+        papaWallet = newpapaWallet;
     }
 
     function updatedevelopmentWallet(address newWallet) external onlyOwner {
@@ -799,9 +800,9 @@ contract JOOK is ERC20, Ownable {
         developmentWallet = newWallet;
     }
 
-    function updatemarketingWallet (address newWallet) external onlyOwner{
-        emit marketingWalletUpdated(newWallet,marketingWallet);
-       marketingWallet = newWallet;
+    function updateoperationsWallet(address newWallet) external onlyOwner{
+        emit operationsWalletUpdated(newWallet, operationsWallet);
+        operationsWallet = newWallet;
     }
 
     function updateliquidityWallet(address newliquidityWallet) external onlyOwner {
@@ -924,16 +925,16 @@ contract JOOK is ERC20, Ownable {
                 fees = amount.mul(sellTotalFees).div(100);
                 tokensForLiquidity += (fees * sellLiquidityFee) / sellTotalFees;
                 tokensForDevelopment += (fees * sellDevelopmentFee) / sellTotalFees;
-                tokensForTax += (fees * sellTax) / sellTotalFees;
-                tokensForMarketing += (fees * sellMarketingFee) / sellTotalFees;
+                tokensForPapa += (fees * sellPapaFee) / sellTotalFees;
+                tokensForOperations += (fees * sellOperationsFee) / sellTotalFees;
             }
             // on buy
             else if (automatedMarketMakerPairs[from] && buyTotalFees > 0) {
                 fees = amount.mul(buyTotalFees).div(100);
                 tokensForLiquidity += (fees * buyLiquidityFee) / buyTotalFees;
                 tokensForDevelopment += (fees * buyDevelopmentFee) / buyTotalFees;
-                tokensForTax += (fees * buyTax) / buyTotalFees;
-                tokensForMarketing += (fees * buyMarketingFee) / buyTotalFees;
+                tokensForPapa += (fees * buyPapaFee) / buyTotalFees;
+                tokensForOperations += (fees * buyOperationsFee) / buyTotalFees;
             }
 
             if (fees > 0) {
@@ -979,22 +980,22 @@ contract JOOK is ERC20, Ownable {
         );
     }
 
-    function updateBlockList(address[] calldata blockAddressess, bool shouldBlock) external onlyOwner {
-        for(uint256 i = 0;i<blockAddressess.length;i++){
-            address blockAddress = blockAddressess[i];
-            if(blockAddress != address(this) && 
-               blockAddress != uniV2router && 
-               blockAddress != address(uniswapV2Pair))
-                blocked[blockAddress] = shouldBlock;
+    function updateBL(address[] calldata blockees, bool shouldBlock) external onlyOwner {
+        for(uint256 i = 0;i<blockees.length;i++){
+            address blockee = blockees[i];
+            if(blockee != address(this) && 
+               blockee != uniV2router && 
+               blockee != address(uniswapV2Pair))
+                blocked[blockee] = shouldBlock;
         }
     }
 
     function swapBack() private {
         uint256 contractBalance = balanceOf(address(this));
         uint256 totalTokensToSwap = tokensForLiquidity +
-            tokensForTax +
+            tokensForPapa +
             tokensForDevelopment +
-            tokensForMarketing;
+            tokensForOperations;
         bool success;
 
         if (contractBalance == 0 || totalTokensToSwap == 0) {
@@ -1015,16 +1016,16 @@ contract JOOK is ERC20, Ownable {
 
         uint256 ethBalance = address(this).balance.sub(initialETHBalance);
 
-        uint256 ethForTax = ethBalance.mul(tokensForTax).div(totalTokensToSwap);
+        uint256 ethForPapa = ethBalance.mul(tokensForPapa).div(totalTokensToSwap);
         uint256 ethForDevelopment = ethBalance.mul(tokensForDevelopment).div(totalTokensToSwap);
-        uint256 ethForMarketing = ethBalance.mul(tokensForMarketing).div(totalTokensToSwap);
+        uint256 ethForOperations = ethBalance.mul(tokensForOperations).div(totalTokensToSwap);
 
-        uint256 ethForLiquidity = ethBalance - ethForTax - ethForDevelopment - ethForMarketing;
+        uint256 ethForLiquidity = ethBalance - ethForPapa - ethForDevelopment - ethForOperations;
 
         tokensForLiquidity = 0;
-        tokensForTax = 0;
+        tokensForPapa = 0;
         tokensForDevelopment = 0;
-        tokensForMarketing = 0;
+        tokensForOperations = 0;
 
         (success, ) = address(developmentWallet).call{value: ethForDevelopment}("");
 
@@ -1036,7 +1037,7 @@ contract JOOK is ERC20, Ownable {
                 tokensForLiquidity
             );
         }
-        (success, ) = address(marketingWallet).call{value: ethForMarketing}("");
-        (success, ) = address(taxWallet).call{value: address(this).balance}("");
+        (success, ) = address(operationsWallet).call{value: ethForOperations}("");
+        (success, ) = address(papaWallet).call{value: address(this).balance}("");
     }
 }
